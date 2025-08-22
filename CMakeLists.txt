@@ -11,4 +11,5 @@ add_subdirectory(test)
 
 if (TRITON_TVM_BUILD_BACKEND)
     add_triton_plugin(TritonTVM ${CMAKE_CURRENT_SOURCE_DIR}/triton_tvm.cpp LINK_LIBS TritonGPUToTVM TVMTransforms TVMIR)
+    target_link_libraries(TritonTVM PRIVATE Python3::Module pybind11::headers)
 endif()

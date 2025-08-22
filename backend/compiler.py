@@ -51,7 +51,7 @@ class TVMBackend(BaseBackend):
         args.update({k: opts[k] for k in TVMOptions.__dataclass_fields__.keys() if k in opts})
         return TVMOptions(**args)
 
-    def get_codegen_implementation(self):
+    def get_codegen_implementation(self, options):
         codegen_fns = {"min_dot_size": lambda lhsType, rhsType: (1, 1, 1)}
         return codegen_fns
 
@@ -68,6 +68,10 @@ class TVMBackend(BaseBackend):
 
     def load_dialects(self, ctx):
         nvidia.load_dialects(ctx)
+
+    def get_module_map(self):
+        from triton.language.extra.cuda import libdevice
+        return {"triton.language.extra.libdevice": libdevice} 
 
     @staticmethod
     def make_ttir(mod, metadata, opt):
@@ -139,7 +143,7 @@ class TVMBackend(BaseBackend):
             metadata["name"] = names[0]
         return ret
 
-    def add_stages(self, stages, options):
+    def add_stages(self, stages, options, language):
         stages["ttir"] = lambda src, metadata: self.make_ttir(src, metadata, options)
         stages["ttgir"] = lambda src, metadata: self.make_ttgir(src, metadata, options, self.capability)
         stages["tvmir"] = lambda src, metadata: self.make_tvmir(src, metadata, options)
