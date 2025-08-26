@@ -144,7 +144,7 @@ class TVMDriver(DriverBase):
         return
 
     def get_current_target(self):
-        return GPUTarget("tvm", 0, 0)
+        return GPUTarget("cuda", 0, 0)
     
     def get_active_torch_device(self):
         import torch

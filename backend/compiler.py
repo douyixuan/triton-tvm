@@ -41,7 +41,7 @@ class TVMBackend(BaseBackend):
 
     @staticmethod
     def supports_target(target: GPUTarget):
-        return target.backend == 'tvm'
+        return target.backend == 'cuda'
 
     def __init__(self, target: GPUTarget) -> None:
         super().__init__(target)
