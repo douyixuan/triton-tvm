@@ -4,7 +4,7 @@ build:
 	TRITON_PLUGIN_DIRS=../triton_tvm \
 	TRITON_BUILD_WITH_CLANG_LLD=true \
 	TRITON_BUILD_WITH_CCACHE=true \
-	python3 -m pip install --no-build-isolation -vvv '.[tests]'
+	python3 -m pip install -e . --no-build-isolation -v
 
 .PHONY: test
 test:
