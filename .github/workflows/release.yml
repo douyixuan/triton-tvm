@@ -86,9 +86,10 @@ jobs:
         cp -r lib dist/
         
         # Copy documentation and examples
-        cp README.md LICENSE.txt dist/
+        cp README.md dist/
+        [ -f LICENSE.txt ] && cp LICENSE.txt dist/
         cp -r example dist/
-        cp -r docs dist/
+        [ -d docs ] && cp -r docs dist/
         
         # Copy build files
         cp CMakeLists.txt Makefile triton_tvm.cpp dist/

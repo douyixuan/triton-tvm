@@ -39,8 +39,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('triton_tvm/backend/**/*.py', 'triton_tvm/example/**/*.py') }}-${{ github.sha }}
         restore-keys: |
+          ${{ runner.os }}-pip-${{ hashFiles('triton_tvm/backend/**/*.py', 'triton_tvm/example/**/*.py') }}-
           ${{ runner.os }}-pip-
     
     - name: Cache ccache
