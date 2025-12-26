@@ -39,9 +39,8 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('triton_tvm/backend/**/*.py', 'triton_tvm/example/**/*.py') }}-${{ github.sha }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('triton_tvm/backend/**/*.py', 'triton_tvm/example/**/*.py') }}
         restore-keys: |
-          ${{ runner.os }}-pip-${{ hashFiles('triton_tvm/backend/**/*.py', 'triton_tvm/example/**/*.py') }}-
           ${{ runner.os }}-pip-
     
     - name: Cache ccache
@@ -84,9 +83,9 @@ jobs:
       run: |
         cd triton_tvm
         echo "Running add.py example..."
-        python example/add.py || echo "add.py test skipped (requires CUDA)"
+        python example/add.py
         echo "Running softmax.py example..."
-        python example/softmax.py || echo "softmax.py test skipped (requires CUDA)"
+        python example/softmax.py
       continue-on-error: true
     
     - name: Archive build artifacts
