@@ -1,6 +1,6 @@
 .PHONY: build
 build:
-	cd ../triton &&
+	cd ../triton && \
 	TRITON_PLUGIN_DIRS=../triton_tvm \
 	TRITON_BUILD_WITH_CLANG_LLD=true \
 	TRITON_BUILD_WITH_CCACHE=true \
