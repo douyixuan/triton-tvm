@@ -1,0 +1,165 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        path: triton_tvm
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    
+    - name: Get version
+      id: get_version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          ccache \
+          clang \
+          lld \
+          llvm-dev \
+          python3-dev \
+          zip
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install numpy pybind11
+    
+    - name: Clone Triton
+      run: |
+        git clone https://github.com/triton-lang/triton.git
+        cd triton
+        git checkout main
+    
+    - name: Build Triton with triton-tvm plugin
+      run: |
+        cd triton
+        TRITON_PLUGIN_DIRS=$PWD/../triton_tvm \
+        TRITON_BUILD_WITH_CLANG_LLD=true \
+        TRITON_BUILD_WITH_CCACHE=true \
+        python3 -m pip install -e python --no-build-isolation -v
+    
+    - name: Verify build
+      run: |
+        python -c "import triton; print(f'Triton version: {triton.__version__}')"
+        python -c "from triton._C.libtriton import triton_tvm; print('triton-tvm plugin loaded successfully')"
+    
+    - name: Create release package
+      run: |
+        cd triton_tvm
+        # Create a distribution directory
+        mkdir -p dist
+        
+        # Copy backend files
+        cp -r backend dist/
+        cp -r include dist/
+        cp -r lib dist/
+        
+        # Copy documentation and examples
+        cp README.md LICENSE.txt dist/
+        cp -r example dist/
+        cp -r docs dist/
+        
+        # Copy build files
+        cp CMakeLists.txt Makefile triton_tvm.cpp dist/
+        
+        # Create tarball
+        cd dist
+        tar -czf ../triton-tvm-${{ steps.get_version.outputs.version }}.tar.gz *
+        cd ..
+        
+        # Create zip for Windows users
+        cd dist
+        zip -r ../triton-tvm-${{ steps.get_version.outputs.version }}.zip *
+    
+    - name: Create build info
+      run: |
+        cd triton_tvm
+        cat > build-info.txt << EOF
+        Triton-TVM Build Information
+        ============================
+        Version: ${{ steps.get_version.outputs.version }}
+        Build Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+        Commit: ${{ github.sha }}
+        Python Version: $(python --version)
+        
+        Installation Instructions:
+        1. Extract this archive
+        2. Clone Triton from https://github.com/triton-lang/triton
+        3. Set TRITON_PLUGIN_DIRS environment variable to this directory
+        4. Build Triton with: pip install -e python --no-build-isolation
+        
+        For detailed instructions, see README.md
+        EOF
+        cp build-info.txt dist/
+    
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: triton-tvm-${{ steps.get_version.outputs.version }}
+        path: |
+          triton_tvm/triton-tvm-${{ steps.get_version.outputs.version }}.tar.gz
+          triton_tvm/triton-tvm-${{ steps.get_version.outputs.version }}.zip
+          triton_tvm/build-info.txt
+    
+    - name: Create GitHub Release
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          triton_tvm/triton-tvm-${{ steps.get_version.outputs.version }}.tar.gz
+          triton_tvm/triton-tvm-${{ steps.get_version.outputs.version }}.zip
+          triton_tvm/build-info.txt
+        body: |
+          # Triton-TVM ${{ steps.get_version.outputs.version }}
+          
+          A transpiler from Triton to TVM TensorIR.
+          
+          ## Installation
+          
+          1. Download and extract one of the archives below
+          2. Clone Triton: `git clone https://github.com/triton-lang/triton.git`
+          3. Set environment variable: `export TRITON_PLUGIN_DIRS=/path/to/triton_tvm`
+          4. Build Triton: `cd triton && pip install -e python --no-build-isolation`
+          
+          ## Files
+          
+          - `triton-tvm-${{ steps.get_version.outputs.version }}.tar.gz` - Source archive (Linux/Mac)
+          - `triton-tvm-${{ steps.get_version.outputs.version }}.zip` - Source archive (Windows)
+          - `build-info.txt` - Build information and instructions
+          
+          For detailed documentation, see the [README](https://github.com/douyixuan/triton-tvm/blob/main/README.md).
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
