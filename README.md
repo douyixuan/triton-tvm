@@ -1,11 +1,24 @@
 # triton-tvm
 
+[![CI](https://github.com/douyixuan/triton-tvm/actions/workflows/ci.yml/badge.svg)](https://github.com/douyixuan/triton-tvm/actions/workflows/ci.yml)
+[![Code Quality](https://github.com/douyixuan/triton-tvm/actions/workflows/lint.yml/badge.svg)](https://github.com/douyixuan/triton-tvm/actions/workflows/lint.yml)
+
 A transpiler from Triton to TVM TensorIR.
 
 ## Features
 
 - Accepts `ttgpu` dialect and reuses existing optimizations as a baseline.
 - End-to-end integration.
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and release automation:
+
+- **CI Workflow**: Automatically builds and tests on every push and pull request
+- **Release Workflow**: Creates versioned releases when tags are pushed (e.g., `v1.0.0`)
+- **Code Quality**: Runs linting and formatting checks
+
+See [.github/workflows/README.md](.github/workflows/README.md) for detailed documentation.
 
 ## Usage
 
