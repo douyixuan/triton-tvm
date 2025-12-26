@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        path: triton_tvm
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          ccache \
+          clang \
+          lld \
+          llvm-dev \
+          python3-dev
+    
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('triton_tvm/backend/**/*.py', 'triton_tvm/example/**/*.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install numpy pybind11
+    
+    - name: Clone Triton
+      run: |
+        git clone https://github.com/triton-lang/triton.git
+        cd triton
+        # Use a stable commit or branch if needed
+        git checkout main
+    
+    - name: Build Triton with triton-tvm plugin
+      run: |
+        cd triton
+        TRITON_PLUGIN_DIRS=$PWD/../triton_tvm \
+        TRITON_BUILD_WITH_CLANG_LLD=true \
+        TRITON_BUILD_WITH_CCACHE=true \
+        python3 -m pip install -e python --no-build-isolation -v
+      env:
+        CCACHE_DIR: ~/.ccache
+    
+    - name: Verify build
+      run: |
+        python -c "import triton; print(f'Triton version: {triton.__version__}')"
+        python -c "from triton._C.libtriton import triton_tvm; print('triton-tvm plugin loaded successfully')"
+    
+    - name: Run tests
+      run: |
+        cd triton_tvm
+        echo "Running add.py example..."
+        python example/add.py
+        echo "Running softmax.py example..."
+        python example/softmax.py
+      continue-on-error: true
+    
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: triton-tvm-build
+        path: |
+          triton/python/build/
+          triton_tvm/
+        retention-days: 7
